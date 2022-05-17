@@ -16,6 +16,7 @@
     <script src="/asset/plugins/mui/js/mui.js" ></script>
     <script src="/asset/js/vue.min.js" ></script>
     <script src="/asset/js/util.js" ></script>
+    <script src="/asset/js/base64.js" ></script>
 </head>
 <body>
 <!--底部菜单-->
@@ -138,7 +139,8 @@
         <div id="convo" data-from="Sonu Joshi">
 
             <ul class="chat-thread">
-
+<!--                <span v-text="JSON.stringify(msgcontext)"></span>-->
+<!--                <span v-text="JSON.stringify(msglist)"></span>-->
 
 
                 <li class="chat " :class="item.ismine?'mine':'other'" v-for="item in msglist" v-if="item.msg.ChatroomType==msgcontext.ChatroomType &&  item.msg.ChatroomId==msgcontext.ChatroomId && ( item.msg.ChatroomType==1 || item.msg.ChatroomType==2 ) ">
@@ -194,7 +196,7 @@
                     </div>
                 </div>
                 <div class="doutupkg">
-                    <div class="pkg" @tap="doutu.choosed=item" v-for="item in doutu.packages">
+                    <div class="pkg" @tap="doutu.choosed = item" v-for="item in doutu.packages">
                         <img :class="item.size || 'small'"  :src="item.icon" />
                     </div>
                 </div>
@@ -229,7 +231,7 @@
 
     function upload(dom){
         uploadfile("attach/upload",dom,function(res){
-            if(res.code==0){
+            if(res.code == 0){
                 app.sendpicmsg(res.data)
             }
 
@@ -272,10 +274,10 @@
                     ChatroomId:0,
                     Content:"",
                     MessageId:"",
-                    UserId:0,
-                    DeviceID:"",
-                    ClientType:"",
-                    MessageSendTime:"",
+                    // UserId:0,
+                    // DeviceID:"",
+                    // ClientType:"",
+                    // MessageSendTime:"",
                 },
                 plugins:[
                     {
@@ -329,19 +331,25 @@
                 iscomplete:false,
                 duration:0,
                 showprocess:false,
+                userInfo:{},
+                SequenceId:1
             },
             created:function(){
+                var _this = this
                 this.loadfriends();
                 this.loadcommunitys();
                 this.loaddoutures();
+                this.loadUserInfo()
                 // var user = userInfo()
                 // if(!!user){
                 //     this.profile.avatar = user.avatar;
                 //     this.profile.nickname = user.nickname;
                 //     this.profile.memo = user.memo;
                 // }
+                setTimeout(function() {
+                    _this.initwebsocket()
+                }, 3000)
 
-                this.initwebsocket()
 
             },
             mounted:function(){
@@ -425,30 +433,7 @@
                     this.msgcontext.UserId = parseInt(util.getUserId());
                     return JSON.parse(JSON.stringify(this.msgcontext))
                 },
-                loaddoutures:function(){
-                    var res=[];
-                    var config = this.doutu.config;
-                    for(var i in config.pkgids){
-                        res[config.pkgids[i]]=(config.baseurl+"/"+config.pkgids[i]+"/info.json")
-                    }
-                    var that = this;
-                    for(var id in res){
-                        //console.log("res[i]",id,res[id])
-                        location_get(res[id],{},function(pkginfo){
-                            //console.log("post res[i]",id,res[id],pkginfo)
-                            var baseurl= config.baseurl+"/"+pkginfo.id+"/"
-                            for(var j in pkginfo.assets){
-                                pkginfo.assets[j] = baseurl+pkginfo.assets[j];
-                            }
-                            pkginfo.icon = baseurl + pkginfo.icon;
-                            that.doutu.packages.push(pkginfo)
-                            if(that.doutu.choosed.pkgid==pkginfo.id){
-                                that.doutu.choosed.assets=pkginfo.assets;
-                            }
 
-                        })
-                    }
-                },
                 showweixin:function(){
                     mui.alert("请加微信号jiepool-winlion索取")
                 } ,
@@ -457,7 +442,7 @@
 
                     }
                     data.ismine = util.getUserId() == msg.UserId;
-                    console.log(data.ismine, util.getUserId(), msg.UserId)
+                    console.log(user, data.ismine, util.getUserId(), msg.UserId, msg)
                     data.user = user;
                     data.msg = msg;
                     this.msglist = this.msglist.concat(data)
@@ -498,28 +483,34 @@
                     //console.log("sendaudiomsg",this.msglist);
                     this.webSocket.send(JSON.stringify(msg))
                 },
+
+
                 singlemsg:function(user){
                     //console.log(user)
                     this.win = "single";
                     this.title = "和"+user.nickname+"聊天中";
                     this.msgcontext.UserId = parseInt(user.member_id);
-                    this.msgcontext.Code = 1;
+                    this.msgcontext.ChatroomId = parseInt(user.chatroom_id);
+                    this.msgcontext.ChatroomType = 1;
                 },
                 groupmsg:function(group){
 
                     this.win = "group";
                     this.title=group.name;
-                    this.msgcontext.ChatroomId = parseInt(group.id);
-                    this.msgcontext.Code = 2;
+                    this.msgcontext.ChatroomId = parseInt(group.chatroom_id);
+                    this.msgcontext.ChatroomType = 2;
                 },
                 loaduserinfo:function(userid,cb){
                     userid = ""+userid;
                     var userinfo = this.usermap[userid];
                     if(!userinfo){
-                        util.post("user/others.home.info",{member_id:parseInt(userid)},function(res){
-                            cb(res.data);
-                            this.usermap[userid] = res.data;
-                        }.bind(this))
+                        var that = this
+                        util.post("user/others.home.info", {member_id:Number(userid)}).then(res=>{
+                            if(res.code == 0){
+                                cb(res.data);
+                                that.usermap[userid] = res.data;
+                            }
+                        })
                     }else{
                         cb(userinfo)
                     }
@@ -528,7 +519,6 @@
                     switch (data.Action) {
                         case 3:     // 聊天室消息
                             var BodyData = JSON.parse(data.BodyData)
-                            console.log(BodyData)
                             this.loaduserinfo(BodyData.UserId,function(user){
                                 this.showmsg(user,BodyData)
                             }.bind(this))
@@ -537,7 +527,7 @@
                             break;
                         case 10:    // 连接认证成功
                             // 消息同步
-                            this.sendmsg(2, "")
+                            this.wsSendMsg(2, "")
                             break;
                         case 100:   // 心跳
                             break;
@@ -545,15 +535,31 @@
                             console.log("忽略的消息类型："+data.Action)
                     }
                 },
-                sendmsg:function(action, msg){
+                wsSendMsg:function(action, msg){
+                    var data = msg(action, msg)
+                    this.webSocket.send(data)
+                    this.SequenceId++
+                },
+                httpSendMsg:function(content) {
+                    util.post("message/push.message", {
+                        "chatroom_id":1100622,"chatroom_type":1,"code":1,"content":content
+                    }).then(res=>{
+                        if(res.code == 0){
+                            cb(res.data);
+                            that.usermap[userid] = res.data;
+                        }
+                    })
+                },
+                msg:function(action, msg) {
                     var data = {}
                     data.Version = 1
                     data.Action = action
-                    data.SequenceId = 0
+                    data.SequenceId = this.SequenceId
                     data.BodyData = util.stringToByte(JSON.stringify(msg))
                     data.BodyLength = data.BodyData.length
                     console.log(data)
-                    this.webSocket.send(JSON.stringify(data))
+                    console.log(JSON.stringify(msg))
+                    return JSON.stringify(data)
                 },
                 initwebsocket:function(){
                     var url = "ws://"+websocket_host;
@@ -563,7 +569,7 @@
                     this.webSocket.onmessage = function(evt){
                         if(evt.data.indexOf("}")>-1){
                             var data = JSON.parse(evt.data)
-                            data.BodyData = window.atob(data.BodyData)
+                            data.BodyData = Base64.decode(data.BodyData)
                             this.onmessage(data);
                         }else{
                             console.log("recv<=="+evt.data)
@@ -579,7 +585,7 @@
                     }
                     var _this = this
                     this.webSocket.onopen = function(evt) {
-                        _this.sendmsg(10, {
+                        _this.wsSendMsg(10, {
                             DeviceID: util.getDeviceID(),
                             UserID: Number(util.getUserId()),
                             AccessToken: util.getToken(),
@@ -589,6 +595,7 @@
                     };
                 },
 
+                // 获取好友
                 loadfriends:function(){
                     var that = this;
                     util.post("user/friend.list", {}).then(res=>{
@@ -605,6 +612,7 @@
                         }
                     })
                 },
+                // 获取群组
                 loadcommunitys:function(){
                     var that = this;
                     util.get("chatroom/my.group.list", {}).then(res=>{
@@ -614,6 +622,46 @@
                             that.communitys = res.data ||[];
                         }
                     })
+                },
+                // 获取所有群组成员
+                loadGroupsUserInfoList:function(){
+
+                },
+                // 获取个人信息
+                loadUserInfo:function(){
+                    var that = this;
+                    util.post("user/member.info", {}).then(res=>{
+                        if(res.code != 0){
+                            mui.toast(res.msg)
+                        }else{
+                            that.userInfo = res.data ||[];
+                            that.usermap[res.data.member_id] = res.data;
+                        }
+                    })
+                },
+                loaddoutures:function(){
+                    var res=[];
+                    var config = this.doutu.config;
+                    for(var i in config.pkgids){
+                        res[config.pkgids[i]]=(config.baseurl+"/"+config.pkgids[i]+"/info.json")
+                    }
+                    var that = this;
+                    for(var id in res){
+                        //console.log("res[i]",id,res[id])
+                        location_get(res[id],{},function(pkginfo){
+                            //console.log("post res[i]",id,res[id],pkginfo)
+                            var baseurl= config.baseurl+"/"+pkginfo.id+"/"
+                            for(var j in pkginfo.assets){
+                                pkginfo.assets[j] = baseurl+pkginfo.assets[j];
+                            }
+                            pkginfo.icon = baseurl + pkginfo.icon;
+                            that.doutu.packages.push(pkginfo)
+                            if(that.doutu.choosed.pkgid==pkginfo.id){
+                                that.doutu.choosed.assets=pkginfo.assets;
+                            }
+
+                        })
+                    }
                 },
                 addfriend:function(){
                     var that = this;
