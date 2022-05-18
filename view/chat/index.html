@@ -184,7 +184,7 @@
             <div class="item-4" v-if="!txtmsg" @tap="panelstat='more'">
                 <img src="/asset/images/more.png" />
             </div>
-            <div class="item-4" v-if="!!txtmsg" @tap="sendtxtmsg(txtmsg)">
+            <div class="item-4" v-if="!!txtmsg" @tap="sendTxtMsg(txtmsg)">
                 <img src="/asset/images/send.png" />
             </div>
         </div>
@@ -340,17 +340,9 @@
                 this.loadcommunitys();
                 this.loaddoutures();
                 this.loadUserInfo()
-                // var user = userInfo()
-                // if(!!user){
-                //     this.profile.avatar = user.avatar;
-                //     this.profile.nickname = user.nickname;
-                //     this.profile.memo = user.memo;
-                // }
                 setTimeout(function() {
                     _this.initwebsocket()
                 }, 3000)
-
-
             },
             mounted:function(){
 
@@ -435,7 +427,7 @@
                 },
 
                 showweixin:function(){
-                    mui.alert("请加微信号jiepool-winlion索取")
+                    mui.alert("请访问 github.com/qaqzzl 获取")
                 } ,
                 showmsg:function(user,msg){
                     var data={
@@ -461,9 +453,9 @@
                     //{id:1,userid:2,dstid:3,cmd:10,media:1,content:"hello"}
                     var msg =this.createmsgcontext();
                     msg.Code = 1;
-                    msg.ChatroomType = txt;
-                    this.showmsg(userInfo(),msg);
-                    this.webSocket.send(JSON.stringify(msg))
+                    msg.Content = txt;
+                    this.showmsg(this.userInfo, msg);
+                    this.httpSendMsg(msg)
                 },
                 sendpicmsg:function(picurl){
                     //{id:1,userid:2,dstid:3,cmd:10,media:4,url:"http://www.baidu.com/a/log,jpg"}
@@ -536,18 +528,13 @@
                     }
                 },
                 wsSendMsg:function(action, msg){
-                    var data = msg(action, msg)
+                    var data = this.msg(action, msg)
                     this.webSocket.send(data)
                     this.SequenceId++
                 },
-                httpSendMsg:function(content) {
-                    util.post("message/push.message", {
-                        "chatroom_id":1100622,"chatroom_type":1,"code":1,"content":content
-                    }).then(res=>{
-                        if(res.code == 0){
-                            cb(res.data);
-                            that.usermap[userid] = res.data;
-                        }
+                httpSendMsg:function(msg) {
+                    util.post("message/send.message", msg).then(res=>{
+                        console.log(res)
                     })
                 },
                 msg:function(action, msg) {
@@ -636,6 +623,10 @@
                         }else{
                             that.userInfo = res.data ||[];
                             that.usermap[res.data.member_id] = res.data;
+
+                            that.profile.avatar = res.data.avatar;
+                            that.profile.nickname = res.data.nickname;
+                            that.profile.memo = res.data.signature;
                         }
                     })
                 },
