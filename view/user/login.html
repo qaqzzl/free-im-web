@@ -9,7 +9,6 @@
 
 <link rel="stylesheet" href="/asset/css/common.css" />
 <link rel="stylesheet" href="/asset/plugins/mui/css/mui.css" />
-<link rel="stylesheet" href="/asset/plugins/mui/css/mui.css" />
 <link rel="stylesheet" href="/asset/css/chat.css" />
 <link rel="stylesheet" href="/asset/css/audio.css" />
 
@@ -34,6 +33,7 @@
         <div class="mui-input-row">
             <label>验证码</label>
             <input v-model="user.verify_code" placeholder="请输入验证码"  type="text" class="mui-input-clear mui-input" >
+            <button type="button" class="mui-btn mui-btn-outlined">默认</button>
         </div>
     </form>
     <div class="mui-content-padded">
@@ -61,10 +61,6 @@
             login:function(){
                 //检测手机号是否正确
                 console.log("login")
-                //检测密码是否为空
-
-                //网络请求
-                //封装了promis
                 util.post("login",this.user).then(res=>{
                     if(res.code != 0){
                         mui.toast(res.msg)

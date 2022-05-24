@@ -55,21 +55,19 @@ function popstateFun() {
 		};
 	   xhr.send(JSON.stringify(data));
    }
-	function uploadfile(uri,dom,fn){
+	function uploadfile(token, dom, fn){
 		var xhr = new XMLHttpRequest();
-		xhr.open("POST","//"+api_host+"/"+uri, true);
+		xhr.open("POST","http://up.qiniup.com", true);
 		// 添加http头，发送信息至服务器时内容编码类型
 		xhr.onreadystatechange = function() {
 			if (xhr.readyState == 4 && (xhr.status == 200 || xhr.status == 304)) {
 				fn.call(this, JSON.parse(xhr.responseText));
 			}
 		};
-		var _data=[];
 		var formdata = new FormData();
-		if(!! userId()){
-			formdata.append("userid",userId());
-		}
 		formdata.append("file",dom.files[0])
+		formdata.append("token",token)
+		formdata.append("fileName", "fileName")
 		xhr.send(formdata);
 	}
 	function uploadblob(uri,blob,filetype,fn){

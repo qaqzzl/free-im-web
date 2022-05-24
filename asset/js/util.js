@@ -176,6 +176,12 @@ Core.prototype.getDeviceID=function(){
 	console.log("device_id:"+device_id)
 	return device_id
 }
+Core.prototype.getDeviceType=function(){
+	return "mobile"		// mobile
+}
+Core.prototype.getClientType=function(){
+	return "web"
+}
 
 Core.prototype.setUserId=function(id){
 	return this.data("userid",id);
@@ -238,6 +244,7 @@ Core.prototype.api=function(uri){
 }
 Core.prototype.post=function(uri,data,fn){
 	var url = this.api(uri)
+	var _this = this
     return new Promise(function (resolve, reject) {
         var xhr = new XMLHttpRequest();
         xhr.open("POST",url, true);
@@ -245,6 +252,15 @@ Core.prototype.post=function(uri,data,fn){
         xhr.setRequestHeader(
         	"Content-Type",
 			"application/json;charset=UTF-8"
+		);
+
+		xhr.setRequestHeader(
+			"device_id",
+			_this.getDeviceID()
+		);
+		xhr.setRequestHeader(
+			"client_type",
+			_this.getClientType()
 		);
 
 		if(Core.prototype.getToken()){

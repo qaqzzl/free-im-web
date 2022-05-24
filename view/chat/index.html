@@ -83,21 +83,21 @@
         </header>
         <ul class="mui-table-view mui-table-view-chevron">
             <li class="mui-table-view-cell mui-media">
-                <a href="update.shtml" class="mui-navigate-right" >
+                <a href="javascript:void (0)" class="mui-navigate-right" >
                     <img class="mui-media-object mui-pull-left head-img" id="head-img" :src="profile.avatar||'/asset/images/avatar0.png'">
                     <div class="mui-media-body">
-                        <span v-text="profile.nickname">betatech</span>
-                        <p class='mui-ellipsis' v-text="profile.memo">专业可靠的IM解决方案专家</p>
+                        <span v-text="profile.nickname">FreeIm</span>
+                        <p class='mui-ellipsis' v-text="profile.memo"></p>
                     </div>
                 </a>
             </li>
         </ul>
         <ul class="mui-table-view">
-            <li class="mui-table-view-cell">
-                <a href="sysmsg.shtml" class="mui-navigate-right">
-                    通知公告
-                </a>
-            </li>
+<!--            <li class="mui-table-view-cell">-->
+<!--                <a href="javascript:void (0)" class="mui-navigate-right">-->
+<!--                    通知公告-->
+<!--                </a>-->
+<!--            </li>-->
 
             <li @click="addfriend" class="mui-table-view-cell">
                 <a class="mui-navigate-right">
@@ -116,7 +116,7 @@
             </li>
         </ul>
         <ul class="mui-table-view" style="margin-top: 25px;">
-            <li  @tap="showweixin" class="mui-table-view-cell">
+            <li  @tap="showGitHub" class="mui-table-view-cell">
                 <a class="mui-navigate-right">
                     获取最新代码
                 </a>
@@ -191,15 +191,15 @@
         <div id="panels" style="display: flex">
             <div v-if="panelstat=='doutu'">
                 <div class="doutures" >
-                    <div @tap="sendpicmsg(item)" class="res" v-for="item in doutu.choosed.assets">
-                        <img :class="doutu.choosed.size ||'small'"  :src="item" />
+                    <div @tap="sendPicMsg(item)" class="res" v-for="item in doutu.choosed.assets">
+                        <img :class="doutu.choosed.size ||'middle'"  :src="item" />
                     </div>
                 </div>
-                <div class="doutupkg">
-                    <div class="pkg" @tap="doutu.choosed = item" v-for="item in doutu.packages">
-                        <img :class="item.size || 'small'"  :src="item.icon" />
-                    </div>
-                </div>
+<!--                <div class="doutupkg">-->
+<!--                    <div class="pkg" @tap="doutu.choosed = item" v-for="item in doutu.packages">-->
+<!--                        <img :class="item.size || 'middle'"  :src="item.icon" />-->
+<!--                    </div>-->
+<!--                </div>-->
             </div>
 
             <div v-if="panelstat=='more'" class="plugins">
@@ -207,9 +207,7 @@
                     <img  :src="item.icon" />
                     <div v-html="item.slot"></div>
                     <p v-text="item.name"></p>
-
                 </div>
-
             </div>
         </div>
     </div>
@@ -230,11 +228,13 @@
 <script>
 
     function upload(dom){
-        uploadfile("attach/upload",dom,function(res){
-            if(res.code == 0){
-                app.sendpicmsg(res.data)
-            }
-
+        util.post("common/get.qiniu.upload.token", {}).then(res=>{
+            var _res = res
+            uploadfile(res.data.token, dom, function(res){
+                console.log(_res)
+                console.log(res)
+                app.sendPicMsg(_res.data.domain + res.key)
+            })
         })
     }
     function userId(){
@@ -260,11 +260,11 @@
                 title:"",
                 doutu:{
                     config:{
-                        "baseurl":"/asset/plugins/doutu",
-                        "pkgids":["mkgif","emoj"]
+                        "baseurl": "/asset/plugins/doutu",
+                        "pkgids":["mkgif"]
                     },
                     packages:[],
-                    choosed:{"pkgid":"emoj","assets":[],"size":"small"}
+                    choosed:{"pkgid":"mkgif","assets":[],"size":"middle"}
                 },
                 msglist:[],
 
@@ -426,7 +426,7 @@
                     return JSON.parse(JSON.stringify(this.msgcontext))
                 },
 
-                showweixin:function(){
+                showGitHub:function(){
                     mui.alert("请访问 github.com/qaqzzl 获取")
                 } ,
                 showmsg:function(user,msg){
@@ -450,32 +450,31 @@
 
                 },
                 sendTxtMsg:function(txt){
-                    //{id:1,userid:2,dstid:3,cmd:10,media:1,content:"hello"}
+                    //{content:"hello"}
                     var msg =this.createmsgcontext();
                     msg.Code = 1;
                     msg.Content = txt;
                     this.showmsg(this.userInfo, msg);
                     this.httpSendMsg(msg)
                 },
-                sendpicmsg:function(picurl){
-                    //{id:1,userid:2,dstid:3,cmd:10,media:4,url:"http://www.baidu.com/a/log,jpg"}
-                    var msg =this.createmsgcontext();
-                    msg.media=4;
-                    msg.url=picurl;
-                    this.showmsg(userInfo(),msg)
-                    this.webSocket.send(JSON.stringify(msg))
+                sendPicMsg:function(picurl){
+                    // {content:"http://www.a,com/picurl.png"}
+                    var msg = this.createmsgcontext();
+                    msg.Code = 2;
+                    msg.Content = picurl;
+                    this.showmsg(this.userInfo, msg)
+                    this.httpSendMsg(msg)
                 },
-                sendaudiomsg:function(url,num){
-                    //{id:1,userid:2,dstid:3,cmd:10,media:3,url:"http://www.a,com/dsturl.mp3",anount:40}
+                sendAudioMsg:function(url,num){
+                    // {content:"http://www.a,com/dsturl.mp3"}
                     var msg =this.createmsgcontext();
-                    msg.media=3;
-                    msg.url=url;
+                    msg.media = 3;
+                    msg.url = url;
                     msg.amount = num;
                     this.showmsg(userInfo(),msg)
                     //console.log("sendaudiomsg",this.msglist);
-                    this.webSocket.send(JSON.stringify(msg))
+                    this.httpSendMsg(msg)
                 },
-
 
                 singlemsg:function(user){
                     //console.log(user)
@@ -576,8 +575,8 @@
                             DeviceID: util.getDeviceID(),
                             UserID: Number(util.getUserId()),
                             AccessToken: util.getToken(),
-                            DeviceType: "pc",
-                            ClientType: "web",
+                            DeviceType: util.getDeviceType(),
+                            ClientType: util.getClientType(),
                         })
                     };
                 },
@@ -643,7 +642,7 @@
                             //console.log("post res[i]",id,res[id],pkginfo)
                             var baseurl= config.baseurl+"/"+pkginfo.id+"/"
                             for(var j in pkginfo.assets){
-                                pkginfo.assets[j] = baseurl+pkginfo.assets[j];
+                                pkginfo.assets[j] = "http://"+location.host+baseurl+pkginfo.assets[j];
                             }
                             pkginfo.icon = baseurl + pkginfo.icon;
                             that.doutu.packages.push(pkginfo)
@@ -711,9 +710,10 @@
                     document.querySelector('.mui-popup-input input').type = 'number';
                 },
                 quit:function () {
-                    sessionStorage.removeItem("userid")
-                    sessionStorage.removeItem("userinfo")
-                    location.href="/user/login.shtml"
+                    localStorage.removeItem("userid")
+                    localStorage.removeItem("userinfo")
+                    localStorage.removeItem("token")
+                    location.href="/view/user/login.html"
                 }
 
 
